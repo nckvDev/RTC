@@ -1,0 +1,795 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Doctor Dashboard</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #f8f9fa;
+        }
+
+        .container {
+            margin-top: 50px;
+        }
+
+        .notifications {
+            position: relative;
+            display: inline-block;
+        }
+
+        .notifications .badge {
+            position: absolute;
+            top: 0;
+            right: 0;
+            padding: 5px 10px;
+            border-radius: 50%;
+            background-color: red;
+            color: white;
+        }
+
+        .dropdown-menu {
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .notification-card {
+            margin: 5px;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            background-color: #fff;
+        }
+
+        .appointment {
+            position: relative;
+            font-weight: bold;
+        }
+
+        .appointment .dot {
+            position: absolute;
+            top: 5px;
+            right: 5px;
+            width: 8px;
+            height: 8px;
+            background-color: red;
+            border-radius: 50%;
+        }
+
+        .text-green {
+            color: #f8f9fa;
+            padding: 0 10px;
+            border-radius: 20px;
+            background-color: #5ed387;
+        }
+
+        .text-orange {
+            color: #f8f9fa;
+            padding: 0 10px;
+            border-radius: 20px;
+            background-color: #ffa023;
+        }
+
+        .text-red {
+            color: #f8f9fa;
+            padding: 0 10px;
+            border-radius: 20px;
+            background-color: #ee5050;
+        }
+
+        .text-grey {
+            color: #f8f9fa;
+            padding: 0 10px;
+            border-radius: 20px;
+            background-color: #808080;
+        }
+
+        .hnid {
+            padding: 0 10px;
+            border-radius: 20px;
+            background-color: #99d9e7;
+        }
+
+        .appoint {
+            margin: 1rem 0;
+
+        }
+
+        #chat-popup {
+            display: none;
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            width: 300px;
+            height: 400px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            box-shadow: 0px 0px 10px rgba(0, 0, 0, 0.1);
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            /* Align content to bottom */
+        }
+
+        #chat-popup .chat-header {
+            padding: 10px;
+            background-color: #007bff;
+            color: #fff;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        #chat-popup .chat-content {
+            padding: 10px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        #chat-popup .chat-input {
+            padding: 10px;
+            display: flex;
+            gap: 0.2rem;
+            align-items: center;
+            /* Center items vertically */
+        }
+
+        #chat-popup .chat-input textarea {
+            flex: 1;
+            /* Take up remaining space */
+        }
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <div class="d-flex justify-content-end">
+            <div class="notifications">
+                <button class="btn btn-secondary" id="notification-icon">
+                    Notifications <span class="badge" id="notification-count">0</span>
+                </button>
+                <div class="dropdown-menu" id="notifications-dropdown" aria-labelledby="notification-icon">
+                    <!-- Notifications will be inserted here -->
+                </div>
+            </div>
+        </div>
+        <h2 class="text-center">Doctor Dashboard</h2>
+        <div class="hed" style="display: flex; gap: 1rem; margin-bottom: 1rem;">
+            <div id="doctor-info" class="card p-4" style="width: 50%;">
+                <h3>Welcome, <span id="officer-name"></span>!</h3>
+                <p><strong>Department:</strong> <span id="officer-department"></span></p>
+                <p><strong>Email:</strong> <span id="officer-email"></span></p>
+                <p>This is your dashboard where you can manage your activities.</p>
+                <button id="logout-btn" class="btn btn-danger">Logout</button>
+            </div>
+            <div id="pateint-count" class="card p-4" style="width: 50%;">
+                <h2>จำนวนผู้ป่วยวันนี้</h2>
+                <div class="d-flex" style="justify-content: space-between;">
+                    <h3>รอตรวจ</h3>
+                    <div class="d-flex" style="gap: 2rem;">
+                        <h3 id="waiting-count"></h3>
+                        <h3>คน</h3>
+                    </div>
+                </div>
+                <div class="d-flex" style="justify-content: space-between;">
+                    <h3>ตรวจแล้ว</h3>
+                    <div class="d-flex" style="gap: 2rem;">
+                        <h3 id="success-count"></h3>
+                        <h3>คน</h3>
+                    </div>
+
+                </div>
+                <div class="d-flex" style="justify-content: space-between;">
+                    <h3>ทั้งหมด</h3>
+                    <div class="d-flex" style="gap: 2rem;">
+                        <h3 id="all-count">
+                            <h3>คน</h3>
+                    </div>
+
+                </div>
+
+            </div>
+
+
+        </div>
+        <div class="card p-4">
+            <div id="calendar">
+                <div id="calendar-container"></div>
+            </div>
+        </div>
+        <div class="d-flex" style="margin: 1rem; gap: 1rem;">
+            <input name="searchStr" class="form-control" style="width: 30%;" type="text">
+            <button id="search-btn" class="btn btn-secondary">ค้นหา</button>
+            <select class="form-control" style="width: 20%;" name="filterStatus" id="">
+                <option value="all">ทั้งหมด</option>
+                <option value="waiting">รอตรวจ</option>
+                <option value="queued">ถึงคิว</option>
+                <option value="success">เสร็จสิ้น</option>
+                <option value="cancel">ยกเลิก</option>
+            </select>
+        </div>
+
+        <div id="appointment-info" class="appoint">
+
+        </div>
+        <div id="chat-popup">
+            <div class="chat-header">
+                Chat with Officer
+                <button type="button" class="close" aria-label="Close">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+            <div class="chat-content">
+                <!-- Chat messages will go here -->
+            </div>
+            <div class="chat-input">
+                <button id="attach-btn" class="btn btn-secondary">
+                    <i class="fas fa-plus"></i>
+                </button>
+                <input type="file" id="file-input" style="display: none;" accept="image/*">
+                <textarea id="message-input" class="form-control" placeholder="Type your message..."></textarea>
+                <button id="send-btn" class="btn btn-primary">Send</button>
+            </div>
+        </div>
+
+        <!-- Notification Modal -->
+        <div class="modal fade" id="notificationModal" tabindex="-1" aria-labelledby="notificationModalLabel"
+            aria-hidden="true">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="notificationModalLabel">Notification</h5>
+                        <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                            <span aria-hidden="true">&times;</span>
+                        </button>
+                    </div>
+                    <div class="modal-body" id="notification-message">
+                        <!-- Notification message will be inserted here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <script src="https://code.jquery.com/jquery-3.5.1.min.js"></script>
+        <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+        <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.2/socket.io.js"></script>
+        <script>
+            $(document).ready(function () {
+                let currentAppoint;
+                // const baseURL = 'https://api-m-health.d.orisma.com'; // Replace with your API base URL
+                const baseURL = 'https://0.0.0.0:3090'; // Replace with your API base URL
+                const officer = JSON.parse(localStorage.getItem('officer')); // Assuming officer info is stored in localStorage
+                const usernamech = 'เจ้าหน้าที่';
+                // const username = officer.officer_name;
+                const username = 'เจ้าหน้าที่';
+                // console.log(officer);
+                // console.log(data);
+                if (!officer) {
+                    alert('Officer information is missing');
+                    window.location.href = 'login.html';
+                    return;
+                }
+
+                $('#officer-name').text(officer.officer_name);
+                $('#officer-department').text(officer.officer_group);
+                $('#officer-email').text(officer.email);
+
+                const officerId = officer.officer_department_id;
+                // console.log('OFFICER:', officerId);
+                const officerDepartmentId = officer.officer_department_id;
+
+                $('#logout-btn').click(function () {
+                    const token = localStorage.getItem('token');
+                    $.ajax({
+                        url: `${baseURL}api/v1/officer/logout`,
+                        type: 'POST',
+                        headers: { 'Authorization': `Bearer ${token}` },
+                        success: function () {
+                            localStorage.removeItem('token');
+                            localStorage.removeItem('officer');
+                            window.location.href = 'login.html';
+                        },
+                        error: function () {
+                            alert('Failed to logout');
+                        }
+                    });
+                });
+
+                // Fetch and display notifications
+                function fetchProtectedRoute(endpoint, callback) {
+                    const token = localStorage.getItem('token');
+                    // console.log('Token', token);
+                    // console.log('URL', `${baseURL}${endpoint}`);
+                    $.ajax({
+                        url: `${baseURL}${endpoint}`,
+                        type: 'GET',
+                        headers: { 'Authorization': `Bearer ${token}` },
+                        success: function (response) {
+                            if (callback) {
+                                callback(response);
+                            }
+                        },
+                        error: function (jqXHR) {
+                            const message = jqXHR.status === 403 ? 'Access Forbidden: You do not have the required role' : 'Failed to access the endpoint';
+                            alert(message);
+                        }
+                    });
+                }
+
+                function fetchNotifications() {
+                    fetchProtectedRoute(`/api/v1/officer/notifications?departmentID=${officerId}`, function (response) {
+                        const notifications = response.notifications;
+                        const notificationCount = notifications.length;
+                        $('#notification-count').text(notificationCount);
+                        const notificationsDropdown = $('#notifications-dropdown');
+                        notificationsDropdown.empty();
+
+                        notifications.forEach(notification => {
+                            const notificationItem = `
+                    <div class="notification-card">
+                        ${notification.notify_content}
+                    </div>`;
+                            notificationsDropdown.append(notificationItem);
+                        });
+                    });
+                }
+
+                $('#notification-icon').click(function () {
+                    $('#notifications-dropdown').toggle();
+                });
+
+                const socket = io(baseURL);
+
+                socket.on('connect', () => {
+                    console.log('Connected to server');
+                    socket.emit('join_department', officerDepartmentId);
+                    console.log(`Joined department ${officerDepartmentId}`);
+                });
+
+                socket.on(`notification_${officerDepartmentId}`, (notification) => {
+                    console.log('Notification received:', notification);
+                    const notificationMessage = notification.officerMessage;
+                    $('#notification-message').text(notificationMessage);
+                    $('#notificationModal').modal('show');
+
+                    setTimeout(() => {
+                        $('#notificationModal').modal('hide');
+                    }, 5000);
+
+                    fetchNotifications();
+                });
+
+                fetchNotifications();
+
+                function fetchAppointmentInfo(searchStr) {
+                    const filterStatus = $('select[name="filterStatus"]').val();
+                    let firstPendingAppointment = true;
+                    console.log(filterStatus)
+                    let str;
+                    if (searchStr) {
+                        str = `/api/v1/doctor/getQueueAppointment?doctorId=${officerId}&searchStr=${encodeURIComponent(searchStr)}&pageIndex=1&pageSize=10`
+                    } else {
+                        str = `/api/v1/doctor/getQueueAppointment?doctorId=${officerId}&pageIndex=1&pageSize=10`
+                    }
+                    if (filterStatus && filterStatus !== "all") {
+                        str += `&filterStatus=${encodeURIComponent(filterStatus)}`;
+                    }
+                    fetchProtectedRoute(str, function (response) {
+                        const appointments = response.data.appointment;
+                        console.log(appointments);
+
+                        $('#appointment-info').empty();
+                        if (appointments != null) {
+                            appointments.forEach(appointment => {
+                                let statusText = '';
+                                let statusClass = '';
+                                const pateintName = `${appointment.first_name} ${appointment.last_name}`
+                                switch (appointment.appointment_status) {
+                                    case 'waiting':
+                                        statusText = 'รอตรวจ';
+                                        statusClass = 'text-orange';
+                                        break;
+                                    case 'success':
+                                        statusText = 'ตรวจแล้ว';
+                                        statusClass = 'text-green';
+                                        break;
+                                    case 'cancel':
+                                        statusText = 'ยกเลิกนัด';
+                                        statusClass = 'text-grey';
+                                        break;
+                                    default:
+                                        statusText = appointment.appointment_status;
+                                        break;
+                                }
+
+                                const appointmentDateTime = new Date(appointment.appointment_date);
+                                const now = new Date();
+                                if (appointmentDateTime <= now && appointment.appointment_status !== 'success' && appointment.appointment_status !== 'cancel') {
+                                    if (firstPendingAppointment) {
+                                        statusText = 'ถึงคิวตรวจ';
+                                        statusClass = 'text-red';
+                                        firstPendingAppointment = false; // Set the flag to false after applying the condition
+                                    } else {
+                                        statusText = 'รอตรวจ';
+                                        statusClass = 'text-orange';
+                                    }
+                                }
+
+                                const thaiDay = ['วันอาทิตย์', 'วันจันทร์', 'วันอังคาร', 'วันพุธ', 'วันพฤหัสบดี', 'วันศุกร์', 'วันเสาร์'];
+
+                                function formatDateThai(dateTimeString) {
+                                    const dateObj = new Date(dateTimeString);
+
+                                    const day = thaiDay[dateObj.getDay()];
+                                    const date = dateObj.getDate();
+                                    const month = dateObj.toLocaleString('th-TH', { month: 'long' }); // Use built-in Thai locale for month names
+                                    const year = dateObj.getFullYear();
+                                    const time = dateObj.toLocaleTimeString('th-TH');
+
+                                    return `${day} ${date} ${month} ${year} เวลา ${time}`;
+                                }
+                                const thaiFormattedDate = formatDateThai(appointment.appointment_date);
+                                const appointmentCard = `
+                                        <div class="card p-4 mb-3" style="border-radius: 20px;">
+                                            <div class="d-flex justify-content-start" style="gap:0.3rem; margin:1rem 0;">
+                                            <span class="${statusClass}">${statusText}</span><br>
+                                            <span class="hnid">${appointment.hn_id}</span><br>
+                                                    </div>
+                                            <div class="d-flex justify-content-between align-items-center">
+                                                <div class="detail">
+                                                    <h3>${appointment.first_name} ${appointment.last_name}</h3>
+                                                    <p>${thaiFormattedDate}</p>
+                                                </div>
+                                                <div class="butt">
+                                                    <button class="btn btn-primary see-detail" id="view-screening-btn ">ดูข้อมูลคัดกรอง</button>
+                                                    <button id="${appointment.appointments_id}" class="btn btn-info chat-btn">แชทเลย</button>
+                                                    <button id="${appointment.appointments_id}" class="btn btn-success start-btn">เริ่มตรวจ</button>
+                                                </div>
+                                            </div>
+                                            <div id="detail" class="other-query-data" >
+                                                <hr>
+                                                    <div class="d-flex justify-content-between">
+                                                        <div class="col-5">
+                                                            <div class="d-flex justify-content-between">
+                                                                <p style="color:green;font-weight: bold;">สิทธิ์รักษา </p>
+                                                                <p>${appointment.right_treatment}</p>
+                                                            </div>
+                                                            <div class="d-flex justify-content-between">
+                                                                <p style="color:green;font-weight: bold;">น้ำหนัก: </p>
+                                                                <p>${appointment.weight} กก</p>
+                                                            </div>
+                                                            <div class="d-flex justify-content-between">
+                                                                <p style="color:green;font-weight: bold;">กรุ๊ปเลือด </p>
+                                                                <p>${appointment.blood_group}</p>
+                                                            </div>
+                                                            <div class="d-flex justify-content-between">
+                                                                <p style="color:green;font-weight: bold;">การแพ้ยา </p>
+                                                                <p>${appointment.drug_allergies}</p>
+                                                            </div>
+                                                        </div>
+                                                        <div class="col-5">
+                                                            <div class="d-flex justify-content-between">
+                                                                <p style="color:green;font-weight: bold;">อายุ </p>
+                                                                <p>${appointment.age} ปี</p>
+                                                            </div>
+                                                            <div class="d-flex justify-content-between">
+                                                                <p style="color:green;font-weight: bold;">ส่วนสูง: </p>
+                                                                <p>${appointment.height} ซม</p>
+                                                            </div>
+                                                            <div class="d-flex justify-content-between">
+                                                                <p style="color:green;font-weight: bold;">โรคประจำตัว </p>
+                                                                <p>${appointment.chronic_illness}</p>
+                                                            </div>
+                                                            <div class="d-flex justify-content-between">
+                                                                <p style="color:green;font-weight: bold;">รายละเอียด </p>
+                                                                <p>${appointment.detail}</p>
+                                                            </div>
+                                                        </div>
+                                                    </div>
+                                            </div>
+                                        </div>`;
+
+                                $('#appointment-info').append(appointmentCard);
+
+                                $('.see-detail').click(function () {
+                                    const detailSection = $(this).closest('.card').find('.other-query-data');
+                                    detailSection.toggle();
+
+                                });
+
+                                $('.chat-btn').click(function () {
+                                    const appointmentId = $(this).attr('id');
+                                    currentAppoint = appointmentId;
+                                    const officerName = $(this).closest('.list-group-item').find('h3').eq(0).text();
+
+                                    $('#chat-popup').show();
+                                    $('#chat-popup .chat-header').text(`Chat with ${pateintName}`);
+                                    socket.emit('join_room', { username, room: appointmentId });
+
+                                    socket.emit('get_last_100_messages', { room: appointmentId });
+                                    socket.on('last_100_messages', (messages) => {
+                                        $('#chat-popup .chat-content').empty();
+
+                                        messages.forEach((message) => {
+                                            // console.log(message);
+                                            const messageClass = message.username === username ? 'right' : 'left';
+                                            const displayUsername = message.username === username ? 'You' : message.username;
+                                            if (message.type === 'image') {
+                                                // Append image if type is 'image'
+                                                $('#chat-popup .chat-content').append(`
+                                                <p class="message ${messageClass}">
+                                                    <strong>${displayUsername}:</strong>
+                                                    <img src="${message.message}" alt="Image" style="max-width: 80px; height: auto;" />
+                                                </p>
+                                            `);
+                                            } else {
+                                                // Handle as text message
+                                                $('#chat-popup .chat-content').append(`
+                                                <p class="message ${messageClass}">
+                                                    <strong>${displayUsername}:</strong> ${message.message}
+                                                </p>
+                                                <span>readed</span>
+                                            `);
+                                            }
+                                            // $('#chat-popup .chat-content').append(`<p class="message ${messageClass}"><strong>${displayUsername}:</strong> ${message.message}</p>`);
+                                        });
+                                    });
+
+                                    socket.on('receive_message', (data) => {
+                                        console.log(data);
+                                        const { message, username: sender, type, __createdtime__ } = data;
+                                        const messageClass = sender === username ? 'right' : 'left';
+                                        const displayUsername = sender === username ? 'You' : sender;
+                                        if (type === 'image') {
+                                            // Append image if type is 'image'
+                                            $('#chat-popup .chat-content').append(`
+                                                <p class="message ${messageClass}">
+                                                    <strong>${displayUsername}:</strong>
+                                                    <img src="${message}" alt="Image" style="max-width: 80px; height: auto;" />
+                                                </p>
+                                            `);
+                                        } else {
+                                            // Handle as text message
+                                            $('#chat-popup .chat-content').append(`
+                                                <p class="message ${messageClass}">
+                                                    <strong>${displayUsername}:</strong> ${message}
+                                                </p>
+                                            `);
+                                        }
+                                    });
+
+                                    let typing = false;
+                                    let timeout;
+
+                                    $('#message-input').keypress((e) => {
+                                        if (e.which != 13) {
+                                            if (!typing) {
+                                                typing = true;
+                                                socket.emit('typing', { user: username, typing: true });
+                                            }
+                                            clearTimeout(timeout);
+                                            timeout = setTimeout(() => {
+                                                typing = false;
+                                                socket.emit('typing', { user: username, typing: false });
+                                            }, 2000);
+                                        }
+                                    });
+
+                                    socket.on('display', (data) => {
+                                        if (data.user !== username) { // Check if the typing event is from a different user
+                                            if (data.typing) {
+                                                $('#chat-popup .chat-content').append('<p class="message typing-indicator">Typing...</p>');
+                                            } else {
+                                                $('.typing-indicator').remove();
+                                            }
+                                        }
+                                    });
+                                    $('#attach-btn').click(function () {
+                                        $('#file-input').click();
+                                    });
+
+                                    $('#file-input').change(function () {
+                                        const file = this.files[0];
+                                        if (file) {
+                                            const reader = new FileReader();
+                                            console.log('FILE', file);
+                                            reader.onload = function (e) {
+                                                const imgPreview = `<img src="${e.target.result}" alt="Image Preview" style="max-width: 100%; height: 50px;" />`;
+                                                $('#message-input').val('').hide();
+                                                $('#message-input').after(imgPreview);
+                                            }
+                                            reader.readAsDataURL(file);
+                                        }
+                                    });
+
+                                    $('#send-btn').off('click').click(function () {
+                                        const message = $('#message-input').val().trim();
+                                        const fileInput = $('#file-input')[0];
+                                        const file = fileInput.files[0];
+                                        console.log(file);
+                                        if (message !== '') {
+                                            socket.emit('send_message', {
+                                                message,
+                                                username,
+                                                room: appointmentId,
+                                            });
+                                            $('#message-input').val('');
+                                        } else if (file) {
+                                            const reader = new FileReader();
+                                            reader.onload = function (e) {
+                                                socket.emit('send_image', {
+                                                    image: file,
+                                                    username,
+                                                    room: appointmentId,
+                                                });
+                                                console.log('send image');
+                                                $('#message-input').show().val('');
+                                                $('#message-input').next('img').remove();
+                                                fileInput.value = ''; // Reset the file input
+                                            }
+                                            reader.readAsDataURL(file);
+                                        }
+                                    });
+                                });
+
+                                $('.start-btn').click(function () {
+                                    const token = localStorage.getItem('token');
+                                    // localStorage.setItem('officer', JSON.stringify(response.officer));
+                                    localStorage.setItem('officer', JSON.stringify(response.officer));
+                                    localStorage.setItem('token', token); // Assuming `token` is available in scope
+                                    localStorage.setItem('appointments', JSON.stringify(appointments));
+                                    const appointmentId = $(this).attr('id');
+                                    const patientId = appointment.pateint;
+                                    window.location.href = `officer-video-call.html?patientId=${patientId}`;
+                                });
+
+                                $('#chat-popup .close').click(function () {
+                                    $('#chat-popup').hide();
+                                });
+
+                                $(document).click(function (event) {
+                                    if (!$(event.target).closest('#chat-popup').length && !$(event.target).hasClass('chat-btn')) {
+                                        socket.emit('leave_room', { username, room: currentAppoint })
+                                        $('#chat-popup').hide();
+                                    }
+                                });
+
+                                $('#chat-popup').click(function (event) {
+                                    event.stopPropagation();
+                                });
+
+
+                                // $('#view-screening-btn').click(function () {
+                                //     $(this).closest('.card').find('.other-query-data').toggleClass('displaynone');
+                                // });
+
+
+                            });
+                        }
+                        else {
+                            const appointmentCard = `
+                            <div class="card p-4 mb-3" style="border-radius: 20px;">
+                                <h1>ไม่พบนัดหมาย</h1>
+                            </div>`
+                            $('#appointment-info').append(appointmentCard);
+                        }
+
+                    });
+                }
+
+                fetchAppointmentInfo();
+
+                function generateCalendar(year, month, appointmentDates) {
+                    const thaiMonths = [
+                        "มกราคม", "กุมภาพันธ์", "มีนาคม", "เมษายน", "พฤษภาคม", "มิถุนายน",
+                        "กรกฎาคม", "สิงหาคม", "กันยายน", "ตุลาคม", "พฤศจิกายน", "ธันวาคม"
+                    ];
+
+                    const firstDay = new Date(year, month - 1, 1);
+                    const daysInMonth = new Date(year, month, 0).getDate();
+
+                    $('#calendar-container').empty();
+
+                    const calendarHeader = `<h3>${thaiMonths[month - 1]} ${year}</h3>`;
+                    $('#calendar-container').append(calendarHeader);
+
+                    const table = $('<table class="table table-bordered"></table>');
+                    const thead = $('<thead></thead>');
+                    const tbody = $('<tbody></tbody>');
+
+                    const daysOfWeek = ['อา', 'จ', 'อ', 'พ', 'พฤ', 'ศ', 'ส'];
+                    let headerRow = '<tr>';
+                    daysOfWeek.forEach(day => {
+                        headerRow += `<th scope="col">${day}</th>`;
+                    });
+                    headerRow += '</tr>';
+                    thead.append(headerRow);
+
+                    const startDay = firstDay.getDay();
+
+                    let currentDate = 1;
+                    for (let i = 0; i < 6; i++) {
+                        let row = $('<tr></tr>');
+                        for (let j = 0; j < 7; j++) {
+                            if (i === 0 && j < startDay) {
+                                row.append('<td></td>');
+                            } else if (currentDate > daysInMonth) {
+                                break;
+                            } else {
+                                let isAppointmentDate = appointmentDates.some(appointment => {
+                                    const appointmentDate = new Date(appointment.appointment_date);
+                                    return appointmentDate.getDate() === currentDate &&
+                                        appointmentDate.getMonth() + 1 === month &&
+                                        appointmentDate.getFullYear() === year;
+                                });
+
+                                if (isAppointmentDate) {
+                                    row.append(`<td class="appointment">${currentDate}
+                                        <span class="dot"></span>
+                                        </td>`);
+                                } else {
+                                    row.append(`<td>${currentDate}</td>`);
+                                }
+
+                                currentDate++;
+                            }
+                        }
+                        tbody.append(row);
+                    }
+
+                    table.append(thead);
+                    table.append(tbody);
+                    $('#calendar-container').append(table);
+                    // $('.dot').css({
+                    //     'display': 'inline-block',
+                    //     'margin-left': '5px',
+                    //     'top': '2px',
+                    //     'right': '2px',
+                    //     'width': '6px',
+                    //     'height': '6px',
+                    //     'border-radius': '50%',
+                    //     'background-color': 'red'
+                    // });
+                }
+
+
+
+                function fetchAppointmentDates() {
+                    fetchProtectedRoute(`/api/v1/doctor/getAppointmentCalendar?doctorId=${officerId}`, function (response) {
+                        const appointmentDates = response.data;
+                        const today = new Date();
+                        const currentYear = today.getFullYear();
+                        const currentMonth = today.getMonth() + 1;
+                        generateCalendar(currentYear, currentMonth, appointmentDates);
+                    });
+                }
+
+                fetchAppointmentDates();
+
+                function fetchAppointmentCount() {
+                    fetchProtectedRoute(`/api/v1/doctor/getCountAppointment?doctorId=${officerId}`, function (response) {
+                        const count = response.data[0];
+                        console.log(count)
+                        $('#waiting-count').text(count.waiting);
+                        $('#success-count').text(count.success);
+                        $('#all-count').text(count.all_appointments);
+                    });
+                }
+
+                fetchAppointmentCount();
+                $('#search-btn').click(function () {
+                    const searchStr = $('input[name="searchStr"]').val();
+                    fetchAppointmentInfo(searchStr);
+                });
+
+                $('#notificationModal').on('hidden.bs.modal', function () {
+                    location.reload();
+                });
+            });
+
+        </script>
+</body>
+
+</html>

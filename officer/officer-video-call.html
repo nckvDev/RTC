@@ -1,0 +1,181 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Video Call</title>
+    <link href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" rel="stylesheet" />
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <link rel="stylesheet" href="officer.css" />
+  </head>
+
+  <body>
+    <div id="video-call-container">
+      <video autoplay class="remote-video" id="remote-video"></video>
+      <video autoplay muted class="local-video" id="local-video"></video>
+      <canvas id="recording-canvas" style="display: none"></canvas>
+      <div id="controls">
+        <div id="bottom-controls">
+          <button id="end-call-btn" class="btn btn-danger">End Call</button>
+          <button id="mute-btn" class="btn btn-warning">Mute</button>
+          <button id="full-screen-btn" class="btn btn-primary">Full Screen</button>
+          <button id="record-button" class="btn btn-info">Start Recording</button>
+          <div id="recording-timer">00:00</div>
+          <button id="see-record" class="btn btn-info">All Record</button>
+        </div>
+      </div>
+      <div
+        class="modal fade"
+        id="videoRecordModal"
+        tabindex="-1"
+        role="dialog"
+        aria-labelledby="videoRecordModalLabel"
+        aria-hidden="true"
+      >
+        <div class="modal-dialog" role="document">
+          <div class="modal-content">
+            <div class="modal-header">
+              <h5 class="modal-title" id="videoRecordModalLabel">Video Records</h5>
+              <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+                <span aria-hidden="true">&times;</span>
+              </button>
+            </div>
+            <div class="modal-body">
+              <div id="videoList"></div>
+              <!-- <video id="videoElement" width="320" height="240" controls>
+                            Your browser does not support the video tag.
+                        </video> -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/3.1.2/socket.io.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@ffmpeg/ffmpeg@0.10.1/dist/ffmpeg.min.js"></script>
+    <script src="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/js/bootstrap.min.js"></script>
+
+    <script>
+      $(document).ready(function () {
+        let token = localStorage.getItem('token');
+        const baseURL = 'https://api-m-health.d.orisma.com'; // Replace with your API base URL
+
+        // const officer = JSON.parse(localStorage.getItem('officer'));
+        const appointments = JSON.parse(localStorage.getItem('appointments'));
+
+        const socket = io.connect(baseURL);
+        console.log('Socket connected:', socket.connected);
+
+        const queryString = window.location.search;
+        const urlParams = new URLSearchParams(queryString);
+        const patientId = 'HN-48160';
+        const officerName = 'รศ. ธีรพงษ์ ตั้งมั่น';
+        const remoteVideo = document.getElementById('remote-video');
+        const doctorId = 'DT-551204';
+        const appointmentId = '1721185399365460';
+
+        let isAlreadyCalling = false;
+        let getCalled = false;
+        const existingCalls = [];
+        const { RTCPeerConnection, RTCSessionDescription } = window;
+        const iceConfiguration = {
+          iceServers: [
+            {
+              urls: 'turn:api-m-health.d.orisma.com:19403',
+              username: 'optional-username', // Replace with actual username if needed
+              credential: 'auth-token', // Replace with the actual credential/token
+            },
+            {
+              urls: 'stun:stun.l.google.com:19302', // Include a STUN server for initial candidate gathering
+            },
+          ],
+          iceTransportPolicy: 'all',
+          bundlePolicy: 'balanced',
+          rtcpMuxPolicy: 'require',
+          iceCandidatePoolSize: 0,
+        };
+
+        const peerConnection = new RTCPeerConnection(iceConfiguration);
+
+        let mediaRecorder;
+        let recordedChunks = [];
+
+        peerConnection.onicecandidate = (event) => {
+          if (event.candidate) {
+            socket.emit('ice-candidate', { candidate: event.candidate, from: doctorId, to: patientId }); ///ID ของเจ้าหน้าที่คนนั้น และ ID ของผู้ป่วยปลายสาย
+            console.log('CHECK CANDIDATE', event.candidate);
+          }
+        };
+
+        socket.on(`ice-candidate${doctorId}`, async (data) => {
+          ///ID ของเจ้าหน้าที่คนนั้น
+          try {
+            await peerConnection.addIceCandidate(new RTCIceCandidate(data.candidate));
+            console.log('ICE CANDIDATE', data.candidate);
+          } catch (e) {
+            console.error('Error adding received ICE candidate', e);
+          }
+        });
+
+        navigator.mediaDevices
+          .getUserMedia({ video: true, audio: true })
+          .then((stream) => {
+            const localVideo = document.getElementById('local-video');
+            if (localVideo) {
+              localVideo.srcObject = stream;
+            }
+            stream.getTracks().forEach((track) => peerConnection.addTrack(track, stream));
+            callUser(patientId, officerName);
+          })
+          .catch((error) => {
+            console.warn(error.message);
+          });
+
+        async function callUser(patientId, officerName) {
+          const offer = await peerConnection.createOffer();
+          await peerConnection.setLocalDescription(new RTCSessionDescription(offer));
+          socket.emit('call-user', {
+            offer,
+            to: patientId,
+            from: officerName,
+          });
+        }
+
+        socket.on('answer-made', async (data) => {
+          await peerConnection.setRemoteDescription(new RTCSessionDescription(data.answer));
+
+          console.log(data.answer);
+          if (!isAlreadyCalling) {
+            callUser(patientId, officerName);
+            isAlreadyCalling = true;
+          }
+        });
+
+        socket.on('call-rejected', (data) => {
+          alert(`User: "Socket: ${data.socket}" rejected your call.`);
+        });
+
+        peerConnection.ontrack = function (event) {
+          const remoteVideo = document.getElementById('remote-video');
+          if (remoteVideo) {
+            remoteVideo.srcObject = event.streams[0];
+            remoteVideo.text = event.streams[0];
+          }
+        };
+
+        document.getElementById('full-screen-btn').addEventListener('click', () => {
+          if (remoteVideo.requestFullscreen) {
+            remoteVideo.requestFullscreen();
+          } else if (remoteVideo.mozRequestFullScreen) {
+            remoteVideo.mozRequestFullScreen();
+          } else if (remoteVideo.webkitRequestFullscreen) {
+            remoteVideo.webkitRequestFullscreen();
+          } else if (remoteVideo.msRequestFullscreen) {
+            remoteVideo.msRequestFullscreen();
+          }
+        });
+      });
+    </script>
+  </body>
+</html>
